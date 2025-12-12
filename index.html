@@ -267,6 +267,12 @@
     let filterCodes = null; // null = no filtering, array = filter by these codes
     let filterFileName = null;
 
+    // Helper to get current theme for ECharts
+    function getEChartsTheme() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return isDark ? 'dark' : null;
+    }
+
     // Dark mode toggle
     const darkModeToggle = document.getElementById('darkModeToggle');
     darkModeToggle.addEventListener('click', () => {
@@ -274,6 +280,11 @@
         const isDark = document.documentElement.classList.contains('dark');
         localStorage.setItem('darkMode', isDark);
         darkModeToggle.querySelector('span').textContent = isDark ? 'light_mode' : 'dark_mode';
+
+        // Re-render dashboard with new theme if data is loaded
+        if (processedData.filteredData) {
+            renderDashboard();
+        }
     });
 
     // Load dark mode preference
@@ -701,7 +712,7 @@
 
     function renderBarChart(data, latestCol, year, tradeType) {
         const chartDom = document.getElementById('barChart');
-        const myChart = echarts.init(chartDom);
+        const myChart = echarts.init(chartDom, getEChartsTheme());
 
         const hsCodes = data.map(d => d.product_code);
         const values = data.map(d => (parseFloat(d[latestCol]) || 0) / 1000);
@@ -758,7 +769,7 @@
 
     function renderDonutChart(totalExports, hemtExports, countryName, tradeType) {
         const chartDom = document.getElementById('donutChart');
-        const myChart = echarts.init(chartDom);
+        const myChart = echarts.init(chartDom, getEChartsTheme());
 
         const totalB = totalExports / 1_000_000;
         const hemtB = hemtExports / 1_000_000;
@@ -853,8 +864,7 @@
                         return `${percentage}%`;
                     },
                     fontSize: 10,
-                    fontWeight: 'bold',
-                    color: '#fff'
+                    fontWeight: 'bold'
                 },
                 emphasis: {
                     focus: 'series'
@@ -879,8 +889,7 @@
                     return `${percentage}%`;
                 },
                 fontSize: 10,
-                fontWeight: 'bold',
-                color: '#333'
+                fontWeight: 'bold'
             },
             emphasis: {
                 focus: 'series'
@@ -888,7 +897,7 @@
         });
 
         const chartDom = document.getElementById('top5Chart');
-        const myChart = echarts.init(chartDom);
+        const myChart = echarts.init(chartDom, getEChartsTheme());
 
         // Dynamic Y-axis label based on filter
         const yAxisLabel = filterCodes
