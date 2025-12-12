@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEMT Trade Data Dashboard</title>
+
+    <!-- External Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .upload-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .upload-section h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .file-upload {
+            display: inline-block;
+            position: relative;
+            margin-right: 10px;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload label {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .file-upload label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .process-btn {
+            background: #fbbf24;
+            color: #111;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-name {
+            color: white;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .loading {
+            color: white;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .dashboard-title {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .dashboard-title h1 {
+            font-size: 28px;
+            color: #333;
+            margin: 0;
+        }
+
+        .content-area {
+            display: grid;
+            grid-template-columns: 500px 1fr 550px;
+            gap: 20px;
+            padding: 30px;
+            min-height: 600px;
+        }
+
+        .table-section {
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table thead {
+            position: sticky;
+            top: 0;
+            background: #667eea;
+            color: white;
+            z-index: 10;
+        }
+
+        table th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tbody tr:hover {
+            background: #f3f4f6;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .description-col {
+            font-size: 11px;
+            line-height: 1.4;
+            max-width: 300px;
+        }
+
+        .value-col {
+            font-weight: 600;
+            color: #059669;
+            text-align: right;
+        }
+
+        .chart-section {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        #barChart {
+            width: 100%;
+            height: 500px;
+        }
+
+        #donutChart {
+            width: 100%;
+            height: 500px;
+        }
+
+        .chart-row {
+            padding: 30px;
+        }
+
+        .chart-section-full {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        #top5Chart {
+            width: 100%;
+            height: 250px;
+            min-height: 200px;
+        }
+
+        .error-message {
+            color: #dc2626;
+            padding: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        @media (max-width: 1600px) {
+            .content-area {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            #barChart, #donutChart {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-section">
+            <h2>📊 HEMT Trade Data Analysis Dashboard</h2>
+            <div class="file-upload">
+                <input type="file" id="fileInput" accept=".xlsx,.xls">
+                <label for="fileInput">Choose Excel File</label>
+            </div>
+            <button class="process-btn" id="processBtn" disabled>Process Data</button>
+            <div class="file-name" id="fileName"></div>
+            <div class="loading" id="loading">⏳ Processing data...</div>
+        </div>
+
+        <div class="dashboard-title" id="dashboardTitle" style="display:none;">
+            <h1 id="titleText">Top 5 HS Codes in India's exports to [Country]</h1>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="content-area" id="contentArea" style="display:none;">
+            <div class="table-section">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>HSCODE</th>
+                            <th>DESCRIPTION</th>
+                            <th style="text-align:right;">EXPORTS VALUE<br>(2024 USD Million)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="chart-section">
+                <div id="barChart"></div>
+            </div>
+
+            <div class="chart-section">
+                <div id="donutChart"></div>
+            </div>
+        </div>
+
+        <div class="chart-row" id="top5ChartRow" style="display:none;">
+            <div class="chart-section-full">
+                <div id="top5Chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log("Working")
+        // HEMT Product Codes (437 codes)
+        const HEMT_CODES = [
+            "84021200", "84021910", "84021920", "84021990", "84029020", "84041000", "84049000",
+            "84122990", "84194010", "84194020", "84194090", "84198910", "84198911", "84198919",
+            "84198920", "84198930", "84198940", "84198950", "84198960", "84198970", "84198980",
+            "84198990", "84213910", "84261100", "84261200", "84261900", "84262000", "84263000",
+            "84264100", "84264900", "84269910", "84269990", "84279000", "84282011", "84289090",
+            "84291110", "84291120", "84291910", "84291920", "84292000", "84293000", "84294010",
+            "84294020", "84294030", "84295100", "84295200", "84295900", "84301010", "84301020",
+            "84302000", "84303110", "84303120", "84303190", "84303900", "84304110", "84304120",
+            "84304130", "84304190", "84304900", "84305010", "84305090", "84312010", "84314100",
+            "84314200", "84314310", "84314390", "84314910", "84314920", "84314930", "84314940",
+            "84314990", "84329010", "84329090", "84331110", "84331190", "84336010", "84336020",
+            "84339000", "84341000", "84342000", "84349010", "84349020", "84351000", "84359000",
+            "84361000", "84362100", "84362900", "84368010", "84368090", "84369100", "84369900",
+            "84371000", "84378010", "84378020", "84378090", "84379010", "84379020", "84379090",
+            "84381020", "84382000", "84383010", "84383090", "84384000", "84385000", "84386000",
+            "84388010", "84388020", "84388030", "84388040", "84388090", "84389010", "84389090",
+            "84401010", "84401090", "84409000", "84411010", "84411090", "84412000", "84413000",
+            "84425010", "84425020", "84425031", "84425039", "84425040", "84425050", "84425090",
+            "84431100", "84431200", "84431300", "84431400", "84431500", "84431600", "84431700",
+            "84431910", "84431920", "84431930", "84431941", "84431949", "84431990", "84439100",
+            "84440010", "84440090", "84451110", "84451190", "84451210", "84451290", "84451300",
+            "84451910", "84451920", "84451930", "84451940", "84451950", "84451960", "84451990",
+            "84452011", "84452012", "84452013", "84452014", "84452019", "84452020", "84452030",
+            "84452040", "84452050", "84452090", "84453011", "84453019", "84453020", "84453030",
+            "84453040", "84453050", "84453090", "84454010", "84454020", "84454030", "84454040",
+            "84454050", "84454090", "84459000", "84461011", "84461012", "84461019", "84461090",
+            "84462110", "84462190", "84462910", "84462990", "84463011", "84463012", "84463019",
+            "84463090", "84471111", "84471119", "84471120", "84471190", "84471211", "84471219",
+            "84471220", "84471290", "84472010", "84472020", "84472030", "84472090", "84479010",
+            "84479020", "84479030", "84481110", "84481190", "84481900", "84482000", "84483100",
+            "84483210", "84483220", "84483230", "84483240", "84483290", "84483310", "84483320",
+            "84483330", "84483340", "84483390", "84483910", "84483920", "84483990", "84484210",
+            "84484220", "84484290", "84484910", "84484920", "84484930", "84484940", "84484950",
+            "84484990", "84485110", "84485120", "84485130", "84485190", "84485900", "84490010",
+            "84490090", "84511010", "84511090", "84514011", "84514019", "84514021", "84514029",
+            "84514091", "84514099", "84515000", "84518011", "84518019", "84518021", "84518022",
+            "84518029", "84518090", "84519000", "84561100", "84561200", "84562000", "84563000",
+            "84564000", "84565000", "84569010", "84569020", "84569090", "84571010", "84571020",
+            "84572010", "84572020", "84572090", "84573010", "84573020", "84573090", "84581100",
+            "84581911", "84581912", "84581913", "84581919", "84581990", "84589100", "84589910",
+            "84589920", "84589931", "84589932", "84589933", "84589934", "84589935", "84589941",
+            "84589942", "84589943", "84589951", "84589959", "84589990", "84591000", "84592100",
+            "84592910", "84592920", "84592930", "84592940", "84592950", "84592990", "84593100",
+            "84593910", "84593990", "84594110", "84594120", "84594130", "84594190", "84594910",
+            "84594920", "84594930", "84594990", "84595110", "84595120", "84595130", "84595190",
+            "84595910", "84595920", "84595930", "84595940", "84595950", "84595990", "84596110",
+            "84596190", "84596910", "84596920", "84596930", "84596940", "84596990", "84597010",
+            "84597020", "84601200", "84601900", "84602200", "84602300", "84602400", "84602910",
+            "84602920", "84602930", "84602940", "84602990", "84603100", "84603910", "84603990",
+            "84604011", "84604012", "84604013", "84604019", "84604020", "84609010", "84609090",
+            "84612011", "84612019", "84612020", "84613010", "84613020", "84613090", "84614011",
+            "84614012", "84614013", "84614014", "84614019", "84614021", "84614022", "84614023",
+            "84614024", "84614025", "84614026", "84614029", "84615011", "84615012", "84615013",
+            "84615014", "84615015", "84615019", "84615021", "84615029", "84619000", "84631010",
+            "84631020", "84631030", "84631090", "84632000", "84633010", "84633020", "84633030",
+            "84633040", "84639010", "84639020", "84639030", "84639090", "84641010", "84641090",
+            "84642000", "84649000", "84661010", "84661020", "84662000", "84663010", "84663020",
+            "84663090", "84669100", "84669200", "84669310", "84669390", "84669400", "84741090",
+            "84742090", "84743110", "84771000", "84772000", "84773000", "84774000", "84775100",
+            "84775900", "84778010", "84778090", "84779000", "84781010", "84791000", "84798200",
+            "84798999", "84799010", "84799020", "84799090", "84804100", "84804900", "84807100",
+            "84807900", "84834000", "84839000", "85044010", "85044090", "85371000", "85372000",
+            "87041010", "87054000", "87059000"
+        ];
+
+        let uploadedFile = null;
+        let processedData = {
+            cleanedData: null,
+            filteredData: null,
+            countryName: null,
+            latestCol: null,
+            year: null,
+            tradeType: null  // 'exports' or 'imports'
+        };
+
+        // File upload handling
+        $('#fileInput').on('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadedFile = file;
+                $('#fileName').text(`Selected: ${file.name}`);
+                $('#processBtn').prop('disabled', false);
+            }
+        });
+
+        // Process button click
+        $('#processBtn').on('click', function() {
+            console.log('[PROCESS_BTN] Click event fired');
+            if (!uploadedFile) {
+                console.error('[PROCESS_BTN] No file uploaded');
+                return;
+            }
+
+            $('#loading').addClass('active');
+            $('#errorMessage').removeClass('active');
+            $('#processBtn').prop('disabled', true);
+
+            // Use setTimeout to allow UI to update
+            setTimeout(() => {
+                try {
+                    console.log('[PROCESS_BTN] Calling processFile...');
+                    processFile(uploadedFile);
+                } catch (error) {
+                    console.error('[PROCESS_BTN] CRITICAL ERROR:', error);
+                    console.error('[PROCESS_BTN] Stack:', error.stack);
+                    showError('Error: ' + error.message + ' (Check console F12)');
+                    $('#loading').removeClass('active');
+                    $('#processBtn').prop('disabled', false);
+                }
+            }, 100);
+        });
+
+        function processFile(file) {
+            console.log('[PROCESS_FILE] Starting...');
+            console.log('[PROCESS_FILE] File name:', file.name);
+            console.log('[PROCESS_FILE] File size:', file.size);
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    console.log('[PROCESS_FILE] File loaded, parsing Excel...');
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    console.log('[PROCESS_FILE] Workbook sheets:', workbook.SheetNames);
+
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                    // Convert to array of arrays
+                    const rawData = XLSX.utils.sheet_to_json(firstSheet, {
+                        header: 1,
+                        defval: null,
+                        raw: false
+                    });
+                    console.log('[PROCESS_FILE] Raw data rows:', rawData.length);
+                    console.log('[PROCESS_FILE] First 3 rows:', rawData.slice(0, 3));
+
+                    // Skip first 10 rows and process
+                    const dataRows = rawData.slice(10);
+                    console.log('[PROCESS_FILE] After skipping 10 rows:', dataRows.length);
+                    console.log('[PROCESS_FILE] First 2 data rows:', dataRows.slice(0, 2));
+
+                    // Clean multi-index columns
+                    console.log('[PROCESS_FILE] Calling cleanMultiIndexColumns...');
+                    const cleaned = cleanMultiIndexColumns(dataRows);
+                    console.log('[PROCESS_FILE] Cleaned data rows:', cleaned.length);
+                    console.log('[PROCESS_FILE] First cleaned row:', cleaned[0]);
+                    processedData.cleanedData = cleaned;
+
+                    // Filter by HEMT codes
+                    console.log('[PROCESS_FILE] Filtering by HEMT codes...');
+                    const filtered = cleaned.filter(row =>
+                        HEMT_CODES.includes(String(row.product_code))
+                    );
+                    console.log('[PROCESS_FILE] Filtered HEMT products:', filtered.length);
+                    processedData.filteredData = filtered;
+
+                    if (filtered.length === 0) {
+                        throw new Error('No HEMT products found in the data');
+                    }
+
+                    // Detect country and year
+                    const columns = Object.keys(cleaned[0]);
+                    console.log('[PROCESS_FILE] Columns from cleaned data:', columns);
+                    console.log('[PROCESS_FILE] Calling detectCountryAndYear...');
+                    const detection = detectCountryAndYear(columns);
+                    console.log('[PROCESS_FILE] Detection result:', detection);
+                    processedData.countryName = detection.countryName;
+                    processedData.latestCol = detection.latestCol;
+                    processedData.year = detection.year;
+                    processedData.tradeType = detection.tradeType;
+
+                    // Render dashboard
+                    console.log('[PROCESS_FILE] Rendering dashboard...');
+                    renderDashboard();
+
+                    $('#loading').removeClass('active');
+                    console.log('[PROCESS_FILE] Complete!');
+                } catch (error) {
+                    console.error('[PROCESS_FILE] ERROR:', error);
+                    console.error('[PROCESS_FILE] Stack:', error.stack);
+                    $('#loading').removeClass('active');
+                    showError('Error: ' + error.message + ' (Check console F12)');
+                    $('#processBtn').prop('disabled', false);
+                }
+            };
+
+            reader.onerror = function(error) {
+                console.error('[PROCESS_FILE] File reader error:', error);
+                $('#loading').removeClass('active');
+                showError('Error reading file (Check console F12)');
+                $('#processBtn').prop('disabled', false);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function cleanMultiIndexColumns(rawData) {
+            console.log('[CLEAN_COLUMNS] Starting...');
+            console.log('[CLEAN_COLUMNS] Raw data length:', rawData ? rawData.length : 'null');
+
+            if (!rawData || rawData.length < 2) {
+                console.error('[CLEAN_COLUMNS] Invalid data structure');
+                throw new Error('Invalid data structure');
+            }
+
+            // Get header rows (first 2 rows for multi-index)
+            const headerRow1 = rawData[0] || [];
+            const headerRow2 = rawData[1] || [];
+            const dataRows = rawData.slice(2);
+
+            console.log('[CLEAN_COLUMNS] Header row 1:', headerRow1);
+            console.log('[CLEAN_COLUMNS] Header row 2:', headerRow2);
+            console.log('[CLEAN_COLUMNS] Data rows count:', dataRows.length);
+
+            // CRITICAL FIX: Forward-fill headerRow1 to handle merged cells (like pandas MultiIndex)
+            const filledRow1 = [];
+            let lastValue = null;
+            for (let val of headerRow1) {
+                if (val !== null && val !== undefined && val !== '') {
+                    lastValue = val;
+                }
+                filledRow1.push(lastValue);
+            }
+            console.log('[CLEAN_COLUMNS] Filled header row 1:', filledRow1);
+
+            // Build column names
+            const columnNames = [];
+            for (let i = 0; i < Math.max(headerRow1.length, headerRow2.length); i++) {
+                const part1 = normalizeText(filledRow1[i]);  // Use filled row!
+                const part2 = normalizeText(headerRow2[i]);
+
+                const parts = [];
+                if (part1 && !part1.includes('unnamed')) parts.push(part1);
+                if (part2 && !part2.includes('unnamed')) parts.push(part2);  // KEEP "value in 2022"!
+
+                if (parts.length === 0) {
+                    columnNames.push(null);
+                    continue;
+                }
+
+                // Find year (will extract from "value in 2022")
+                const yearMatch = parts.join(' ').match(/\b\d{4}\b/);
+                const year = yearMatch ? yearMatch[0] : null;
+
+                // Find country/label (NOW skip year-containing parts and "value" phrases)
+                let label = null;
+                for (let p of parts) {
+                    if (/\b\d{4}\b/.test(p)) continue;  // Skip "value in 2022"
+                    if (p.startsWith('value in') || p === 'value') continue;  // Skip "value" phrases
+                    label = p;
+                    break;
+                }
+
+                if (year && label) {
+                    columnNames.push(slugify(label) + '_' + year);
+                } else if (year) {
+                    columnNames.push('year_' + year);
+                } else {
+                    columnNames.push(slugify(parts.join(' ')));
+                }
+            }
+
+            console.log('[CLEAN_COLUMNS] Generated column names:', columnNames);
+
+            // Find first non-null columns for product_code and product_label
+            let codeIdx = -1, labelIdx = -1;
+            for (let i = 0; i < columnNames.length; i++) {
+                if (columnNames[i]) {
+                    if (codeIdx === -1) codeIdx = i;
+                    else if (labelIdx === -1) { labelIdx = i; break; }
+                }
+            }
+
+            console.log('[CLEAN_COLUMNS] Code index:', codeIdx, 'Label index:', labelIdx);
+
+            if (codeIdx !== -1) columnNames[codeIdx] = 'product_code';
+            if (labelIdx !== -1) columnNames[labelIdx] = 'product_label';
+
+            console.log('[CLEAN_COLUMNS] Final column names:', columnNames);
+
+            // Convert to array of objects
+            const result = [];
+            for (let row of dataRows) {
+                if (!row || row.every(cell => !cell)) continue;
+
+                const obj = {};
+                let hasData = false;
+                for (let i = 0; i < columnNames.length; i++) {
+                    if (columnNames[i]) {
+                        let value = row[i];
+                        if (columnNames[i] === 'product_code' && value) {
+                            value = String(value).trim().replace(/^['"]|['"]$/g, '');
+                        }
+                        if (value !== null && value !== undefined && value !== '') {
+                            hasData = true;
+                        }
+                        obj[columnNames[i]] = value;
+                    }
+                }
+                if (hasData) result.push(obj);
+            }
+
+            console.log('[CLEAN_COLUMNS] Result rows:', result.length);
+            console.log('[CLEAN_COLUMNS] Sample row:', result[0]);
+            console.log('[CLEAN_COLUMNS] Complete!');
+            return result;
+        }
+
+        function normalizeText(s) {
+            if (!s) return null;
+            const t = String(s).trim().toLowerCase();
+            if (t === '' || t === 'nan' || t === 'null' || t === 'undefined') return null;
+            return t.replace(/['''\"/\\\-–—,:;()]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function slugify(s) {
+            if (!s) return '';
+            return s.replace(/[^0-9a-zA-Z\s]/g, '').replace(/\s+/g, '_').toLowerCase();
+        }
+
+        function detectCountryAndYear(columns) {
+            console.log('[DETECT_COUNTRY] Starting...');
+            console.log('[DETECT_COUNTRY] Input columns:', columns);
+            console.log('[DETECT_COUNTRY] Column count:', columns.length);
+
+            // Find first column that looks like country_year pattern
+            let countrySlug = null;
+            let latestCol = null;
+            let year = null;
+
+            const yearCols = columns.filter(c => /_\d{4}$/.test(c));
+            console.log('[DETECT_COUNTRY] Columns ending with _YYYY:', yearCols);
+
+            if (yearCols.length > 0) {
+                const firstCol = yearCols[0];
+
+                // Detect trade type and extract country slug
+                let tradeType = null;
+
+                if (firstCol.includes('exports_to')) {
+                    tradeType = 'exports';
+                    countrySlug = firstCol.replace(/_\d{4}$/, '').replace(/.*exports_to_/, '');
+                } else if (firstCol.includes('imports_from')) {
+                    tradeType = 'imports';
+                    countrySlug = firstCol.replace(/_\d{4}$/, '').replace(/.*imports_from_/, '');
+                } else {
+                    // Fallback to old logic
+                    countrySlug = firstCol.replace(/_\d{4}$/, '');
+                    tradeType = 'exports';  // Default to exports
+                }
+
+                console.log('[DETECT_COUNTRY] Trade type:', tradeType);
+                console.log('[DETECT_COUNTRY] Country slug:', countrySlug);
+
+                // Filter for this country's columns
+                const thisCountryCols = yearCols.filter(c => c.includes(countrySlug));
+                console.log('[DETECT_COUNTRY] This country columns:', thisCountryCols);
+
+                // Get latest year
+                latestCol = thisCountryCols.sort().pop();
+                console.log('[DETECT_COUNTRY] Latest column:', latestCol);
+
+                year = latestCol.match(/\d{4}$/)[0];
+                console.log('[DETECT_COUNTRY] Year:', year);
+
+                // Create display name
+                const countryName = countrySlug
+                    .replace(/_/g, ' ')
+                    .split(' ')
+                    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(' ');
+                console.log('[DETECT_COUNTRY] Country name:', countryName);
+
+                const result = { countryName, latestCol, year, countrySlug, tradeType };
+                console.log('[DETECT_COUNTRY] Complete! Result:', result);
+                return result;
+            }
+
+            console.error('[DETECT_COUNTRY] No year columns found!');
+            console.error('[DETECT_COUNTRY] Columns that were checked:', columns);
+            throw new Error('Could not detect country and year from data. Check console for column details.');
+        }
+
+        function renderDashboard() {
+            const { cleanedData, filteredData, countryName, latestCol, year, tradeType } = processedData;
+
+            // Update title dynamically based on trade type
+            const tradeText = tradeType === 'exports' ? 'exports to' : 'imports from';
+            $('#titleText').text(`Top 5 HS Codes in India's ${tradeText} ${countryName}`);
+            $('#dashboardTitle').show();
+            $('#contentArea').show();
+
+            // Sort filtered data by latest year
+            const sorted = [...filteredData].sort((a, b) => {
+                const aVal = parseFloat(a[latestCol]) || 0;
+                const bVal = parseFloat(b[latestCol]) || 0;
+                return bVal - aVal;
+            });
+
+            // Render table (top 5)
+            renderTable(sorted.slice(0, 5), latestCol, year, tradeType);
+
+            // Render bar chart (top 5)
+            renderBarChart(sorted.slice(0, 5), latestCol, year, tradeType);
+
+            // Calculate totals for donut chart
+            const totalExports = cleanedData.reduce((sum, row) => {
+                return sum + (parseFloat(row[latestCol]) || 0);
+            }, 0);
+
+            const hemtExports = filteredData.reduce((sum, row) => {
+                return sum + (parseFloat(row[latestCol]) || 0);
+            }, 0);
+
+            renderDonutChart(totalExports, hemtExports, countryName, tradeType);
+
+            // Render Top 5 share chart
+            renderTop5ShareChart(sorted, latestCol, year, tradeType);
+        }
+
+        function renderTable(data, latestCol, year, tradeType) {
+            // Update table header dynamically
+            const tradeLabel = tradeType === 'exports' ? 'EXPORTS VALUE' : 'IMPORTS VALUE';
+            $('#dataTable thead th').eq(2).html(`${tradeLabel}<br>(${year} USD Million)`);
+
+            const tbody = $('#tableBody');
+            tbody.empty();
+
+            data.forEach(row => {
+                const value = parseFloat(row[latestCol]) || 0;
+                const formatted = `$${(value / 1000).toFixed(2)}M`;
+
+                const tr = $('<tr>');
+                tr.append($('<td>').text(row.product_code));
+                tr.append($('<td class="description-col">').text(row.product_label || ''));
+                tr.append($('<td class="value-col">').text(formatted));
+                tbody.append(tr);
+            });
+        }
+
+        function renderBarChart(data, latestCol, year, tradeType) {
+            const chartDom = document.getElementById('barChart');
+            const myChart = echarts.init(chartDom);
+
+            const hsCodes = data.map(d => d.product_code);
+            const values = data.map(d => (parseFloat(d[latestCol]) || 0) / 1000);
+            const labels = values.map(v => `$${v.toFixed(2)}M`);
+
+            // Dynamic labels based on trade type
+            const tradeLabel = tradeType === 'exports' ? 'EXPORT' : 'IMPORT';
+
+            const option = {
+                title: {
+                    text: `LEADING MACHINERY ${tradeLabel} VALUES BY HS CODE`,
+                    left: 'center',
+                    top: 10,
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' }
+                },
+                grid: {
+                    left: '10%',
+                    right: '15%',
+                    top: '20%',
+                    bottom: '10%'
+                },
+                xAxis: {
+                    type: 'value',
+                    name: `${tradeLabel} VALUE (${year} USD Million)`,
+                    nameLocation: 'middle',
+                    nameGap: 25,
+                    nameTextStyle: {
+                        fontSize: 11
+                    }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: hsCodes,
+                    inverse: true,
+                    axisLabel: {
+                        fontSize: 11
+                    }
+                },
+                series: [{
+                    type: 'bar',
+                    data: values,
+                    itemStyle: {
+                        color: '#fbbf24'
+                    },
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: function(params) {
+                            return labels[params.dataIndex];
+                        },
+                        fontSize: 11
+                    }
+                }]
+            };
+
+            myChart.setOption(option);
+
+            // Responsive resize
+            window.addEventListener('resize', () => {
+                myChart.resize();
+            });
+        }
+
+        function renderDonutChart(totalExports, hemtExports, countryName, tradeType) {
+            const chartDom = document.getElementById('donutChart');
+            const myChart = echarts.init(chartDom);
+
+            const totalB = totalExports / 1_000_000;
+            const hemtB = hemtExports / 1_000_000;
+            const otherB = totalB - hemtB;
+            const hemtPercent = (hemtB / totalB * 100).toFixed(2);
+
+            // Dynamic label based on trade type
+            const tradeLabel = tradeType === 'exports' ? 'EXPORTS TO' : 'IMPORTS FROM';
+
+            const option = {
+                title: {
+                    text: `HEMT'S SHARE OF INDIA'S ${tradeLabel} ${countryName.toUpperCase()}`,
+                    left: 'center',
+                    top: 10,
+                    textStyle: {
+                        fontSize: 12,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        return `${params.name}<br/>$${params.value.toFixed(2)}B (${params.percent.toFixed(1)}%)`;
+                    }
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: 20,
+                    left: 'center'
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['35%', '60%'],
+                    center: ['50%', '50%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        formatter: function(params) {
+                            if (params.name === 'HEMT') {
+                                return `${params.name}\n$${params.value.toFixed(2)}B\n${params.percent.toFixed(1)}%`;
+                            }
+                            return '';
+                        },
+                        fontSize: 11,
+                        fontWeight: 'bold'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 13,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    data: [
+                        {
+                            value: hemtB,
+                            name: 'HEMT',
+                            itemStyle: { color: '#fbbf24' },
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                formatter: `$${hemtB.toFixed(2)}B, ${hemtPercent}%`,
+                                fontSize: 10,
+                                color: '#000'
+                            }
+                        },
+                        {
+                            value: otherB,
+                            name: 'TOTAL EXPORTS VALUE PERTAINING TO HEMT',
+                            itemStyle: { color: '#fef3c7' }
+                        }
+                    ]
+                }]
+            };
+
+            myChart.setOption(option);
+
+            // Responsive resize
+            window.addEventListener('resize', () => {
+                myChart.resize();
+            });
+        }
+
+        function renderTop5ShareChart(sorted, latestCol, year, tradeType) {
+            console.log('[TOP5_CHART] Starting...');
+            console.log('[TOP5_CHART] Sorted data length:', sorted.length);
+            console.log('[TOP5_CHART] Trade type:', tradeType);
+
+            // Get top 5 products
+            const top5 = sorted.slice(0, 5);
+            const hemtTotal = sorted.reduce((sum, row) => sum + (parseFloat(row[latestCol]) || 0), 0);
+
+            console.log('[TOP5_CHART] HEMT total:', hemtTotal);
+            console.log('[TOP5_CHART] Top 5 products:', top5.map(r => r.product_code));
+
+            // Color palette for distinct segments
+            const colors = ['#667eea', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#e5e7eb'];
+
+            // Dynamic labels based on trade type
+            const tradeLabel = tradeType === 'exports' ? 'EXPORTS' : 'IMPORTS';
+            const tradeLabelCapital = tradeType === 'exports' ? 'Export' : 'Import';
+
+            // Build series array - ONE SERIES OBJECT PER SEGMENT (correct ECharts way)
+            const seriesArray = [];
+
+            // Add a series for each of the top 5 products
+            top5.forEach((row, idx) => {
+                const value = (parseFloat(row[latestCol]) || 0) / 1000;
+                const percentage = ((parseFloat(row[latestCol]) / hemtTotal) * 100).toFixed(1);
+                console.log(`[TOP5_CHART] Product ${idx + 1}: ${row.product_code} = $${value.toFixed(2)}M (${percentage}%)`);
+
+                seriesArray.push({
+                    name: row.product_code,
+                    type: 'bar',
+                    stack: 'total',
+                    barWidth: '50%',
+                    data: [{
+                        value: value,
+                        percentage: percentage
+                    }],
+                    itemStyle: {
+                        color: colors[idx]
+                    },
+                    label: {
+                        show: true,
+                        position: parseFloat(percentage) > 8 ? 'inside' : 'outside',
+                        formatter: `${row.product_code}\n${percentage}%`,
+                        fontSize: 10,
+                        fontWeight: 'bold',
+                        color: parseFloat(percentage) > 8 ? '#fff' : '#000'
+                    }
+                });
+            });
+
+            // Add series for "Others"
+            const top5Total = top5.reduce((sum, row) => sum + (parseFloat(row[latestCol]) || 0), 0);
+            const othersTotal = hemtTotal - top5Total;
+            const othersValue = othersTotal / 1000;
+            const othersPercentage = ((othersTotal / hemtTotal) * 100).toFixed(1);
+
+            console.log('[TOP5_CHART] Others: $' + othersValue.toFixed(2) + 'M (' + othersPercentage + '%)');
+
+            seriesArray.push({
+                name: 'Other HEMT Products',
+                type: 'bar',
+                stack: 'total',
+                barWidth: '50%',
+                data: [{
+                    value: othersValue,
+                    percentage: othersPercentage
+                }],
+                itemStyle: {
+                    color: colors[5]
+                },
+                label: {
+                    show: true,
+                    position: 'inside',
+                    formatter: `Others\n${othersPercentage}%`,
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    color: '#000'
+                }
+            });
+
+            console.log('[TOP5_CHART] Built series array with', seriesArray.length, 'series objects');
+
+            // Render stacked bar chart
+            const chartDom = document.getElementById('top5Chart');
+            const myChart = echarts.init(chartDom);
+
+            const option = {
+                title: {
+                    text: `TOP 5 PRODUCTS BREAKDOWN OF TOTAL HEMT ${tradeLabel}`,
+                    left: 'center',
+                    top: 20,
+                    textStyle: {
+                        fontSize: 13,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: function(params) {
+                        let result = '';
+                        params.forEach(param => {
+                            result += `${param.seriesName}<br/>`;
+                            result += `Value: $${param.value.toFixed(2)}M<br/>`;
+                            result += `Share: ${param.data.percentage}%<br/><br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: seriesArray.map(s => s.name),
+                    bottom: 15,
+                    left: 'center',
+                    itemWidth: 15,
+                    itemHeight: 10,
+                    itemGap: 10,
+                    textStyle: {
+                        fontSize: 10
+                    }
+                },
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '80px',
+                    bottom: '80px',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    name: `${tradeLabelCapital} Value (${year} USD Million)`,
+                    nameLocation: 'middle',
+                    nameGap: 30,
+                    nameTextStyle: {
+                        fontSize: 11
+                    }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: ['HEMT Products']
+                },
+                series: seriesArray  // Array of 6 series objects
+            };
+
+            myChart.setOption(option);
+
+            // Show the chart row
+            $('#top5ChartRow').show();
+
+            // CRITICAL FIX: Force ECharts to resize after container becomes visible
+            setTimeout(() => {
+                myChart.resize();
+                console.log('[TOP5_CHART] Forced resize after show');
+            }, 100);
+
+            // Responsive resize
+            window.addEventListener('resize', () => {
+                myChart.resize();
+            });
+
+            console.log('[TOP5_CHART] Complete!');
+        }
+
+        function showError(message) {
+            $('#errorMessage').text(message).addClass('active');
+        }
+    </script>
+</body>
+</html>
