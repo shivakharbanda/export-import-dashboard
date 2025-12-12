@@ -767,9 +767,14 @@
 
         const tradeLabel = tradeType === 'exports' ? 'EXPORTS TO' : 'IMPORTS FROM';
 
+        // Dynamic label based on filter
+        const filteredLabel = filterCodes
+            ? `Filtered Products (${filterCodes.length} codes)`
+            : 'All Products';
+
         const option = {
             title: {
-                text: `TRADESCOPE'S SHARE OF INDIA'S ${tradeLabel} ${countryName.toUpperCase()}`,
+                text: `${filteredLabel.toUpperCase()}'S SHARE OF INDIA'S ${tradeLabel} ${countryName.toUpperCase()}`,
                 left: 'center',
                 top: 10,
                 textStyle: { fontSize: 12, fontWeight: 'bold' }
@@ -794,14 +799,14 @@
                 },
                 label: {
                     show: true,
-                    formatter: (params) => params.name === 'TradeScope' ? `${params.name}\n$${params.value.toFixed(2)}B\n${params.percent.toFixed(1)}%` : '',
+                    formatter: (params) => params.name.includes('Products') ? `${params.name}\n$${params.value.toFixed(2)}B\n${params.percent.toFixed(1)}%` : '',
                     fontSize: 11,
                     fontWeight: 'bold'
                 },
                 data: [
                     {
                         value: hemtB,
-                        name: 'TradeScope',
+                        name: filteredLabel,
                         itemStyle: { color: '#f97316' }
                     },
                     {
@@ -862,7 +867,7 @@
         const othersValue = othersTotal / 1000;
 
         seriesArray.push({
-            name: 'Other TradeScope Products',
+            name: 'Other Products',
             type: 'bar',
             stack: 'total',
             data: [othersValue],
@@ -885,9 +890,14 @@
         const chartDom = document.getElementById('top5Chart');
         const myChart = echarts.init(chartDom);
 
+        // Dynamic Y-axis label based on filter
+        const yAxisLabel = filterCodes
+            ? `Filtered Products (${filterCodes.length} codes)`
+            : 'All Products';
+
         const option = {
             title: {
-                text: `TOP ${selectedTopN} PRODUCTS BREAKDOWN OF TOTAL TRADESCOPE ${tradeLabel}`,
+                text: `TOP ${selectedTopN} PRODUCTS BREAKDOWN OF TOTAL ${tradeLabel}`,
                 left: 'center',
                 top: 20,
                 textStyle: { fontSize: 13, fontWeight: 'bold' }
@@ -931,7 +941,7 @@
             },
             yAxis: {
                 type: 'category',
-                data: ['TradeScope Products']
+                data: [yAxisLabel]
             },
             series: seriesArray
         };
